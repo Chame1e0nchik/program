@@ -1,9 +1,9 @@
-from myapp import add, substract
+from myapp.app import add, subtract
 
 # this method can add two numbers
 def test_add ():
     assert add(3,4) == 7
 
-# this method can substract numbers
+# this method can subtract numbers
 def test_subtract ():
-    assert substract(3,4) == -1
+    assert subtract(3,4) == -1
