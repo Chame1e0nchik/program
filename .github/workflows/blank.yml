@@ -1,0 +1,91 @@
+name: Python CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install pytest pytest-cov
+
+      - name: Hello message
+        run: echo "Hello, GitHub Actions!"
+
+      - name: Run tests with coverage
+        run: |
+          python -m pytest \
+            --cov=myapp \
+            --cov-report=xml \
+            --cov-report=html \
+            --cov-fail-under=70
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            htmlcov/
+            coverage.xml
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout pull request branch
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.head_ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build project
+        run: |
+          python -m compileall myapp
+
+      - name: Add README badge if missing
+        shell: bash
+        run: |
+          BADGE='![Build Status](https://github.com/Chame1e0nchik/program/actions/workflows/blank.yml/badge.svg)'
+
+          if ! grep -q "actions/workflows/blank.yml/badge.svg" README.md; then
+            printf "%s\n\n" "$BADGE" | cat - README.md > README.tmp
+            mv README.tmp README.md
+            echo "README_UPDATED=true" >> $GITHUB_ENV
+          else
+            echo "README_UPDATED=false" >> $GITHUB_ENV
+          fi
+
+      - name: Commit README changes
+        if: env.README_UPDATED == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add README.md
+          git commit -m "Add GitHub Actions status badge"
+          git push
+
